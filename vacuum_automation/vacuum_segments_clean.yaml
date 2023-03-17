@@ -1,0 +1,90 @@
+- id: sao_di_ji_fen_qu
+  alias: 扫地机分区打扫
+  trigger:
+  - platform: state
+    entity_id: input_boolean.yang_tai_sao_di_ji
+  - platform: state
+    entity_id: input_boolean.shu_fang_sao_di_ji
+  - platform: state
+    entity_id: input_boolean.ke_ting_sao_di_ji
+  - platform: state
+    entity_id: input_boolean.er_tong_fang_sao_di_ji
+  - platform: state
+    entity_id: input_boolean.xuan_guan_sao_di_ji
+  - platform: state
+    entity_id: input_boolean.chu_fang_sao_di_ji
+  - platform: state
+    entity_id: input_boolean.can_ting_sao_di_ji
+  - platform: state
+    entity_id: input_boolean.ke_wei_sao_di_ji
+  - platform: state
+    entity_id: input_boolean.zhu_wo_sao_di_ji
+  - platform: state
+    entity_id: input_boolean.zhu_wei_sao_di_ji
+  - platform: state
+    entity_id:
+    - vacuum.roborock_a64_d5de_robot_cleaner
+    to: docked
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 20
+    id: vacuum_docked
+  action:
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.to_state.state == ''on'' }}'
+      - condition: state
+        entity_id: vacuum.roborock_a64_d5de_robot_cleaner
+        state: docked
+      sequence:
+      - service: xiaomi_miot.send_command
+        data_template:
+          entity_id: vacuum.roborock_a64_d5de_robot_cleaner
+          method: app_segment_clean
+          params: '{% set switches = [''yang_tai_sao_di_ji'', ''shu_fang_sao_di_ji'',
+            ''ke_ting_sao_di_ji'', ''er_tong_fang_sao_di_ji'', ''xuan_guan_sao_di_ji'',
+            ''chu_fang_sao_di_ji'', ''can_ting_sao_di_ji'', ''ke_wei_sao_di_ji'',
+            ''zhu_wo_sao_di_ji'', ''zhu_wei_sao_di_ji''] %} {% set segments = [16,
+            17, 18, 19, 20, 21, 22, 23, 24, 25] %} {% set index = switches.index(trigger.to_state.object_id)
+            %} {{ [segments[index]] }} '
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.to_state.state == ''off'' }}'
+      - condition: state
+        entity_id: vacuum.roborock_a64_d5de_robot_cleaner
+        state: cleaning
+      sequence:
+      - service: vacuum.return_to_base
+        data: {}
+        target:
+          entity_id: vacuum.roborock_a64_d5de_robot_cleaner
+    - conditions:
+      - condition: trigger
+        id: vacuum_docked
+      sequence:
+      - service: input_boolean.turn_off
+        target:
+          entity_id:
+          - input_boolean.yang_tai_sao_di_ji
+          - input_boolean.shu_fang_sao_di_ji
+          - input_boolean.ke_ting_sao_di_ji
+          - input_boolean.er_tong_fang_sao_di_ji
+          - input_boolean.xuan_guan_sao_di_ji
+          - input_boolean.chu_fang_sao_di_ji
+          - input_boolean.can_ting_sao_di_ji
+          - input_boolean.ke_wei_sao_di_ji
+          - input_boolean.zhu_wo_sao_di_ji
+          - input_boolean.zhu_wei_sao_di_ji
+        data: {}
+      - service: select.select_option
+        data:
+          option: Custom
+        target:
+          entity_id: select.roborock_a64_d5de_water_level
+      - service: vacuum.set_fan_speed
+        data:
+          fan_speed: Custom
+        target:
+          entity_id: vacuum.roborock_a64_d5de_robot_cleaner

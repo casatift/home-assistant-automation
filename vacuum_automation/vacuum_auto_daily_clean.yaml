@@ -1,0 +1,119 @@
+- id: '1678270436272'
+  alias: 扫地机分区自动化
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - input_boolean.chi_jia_kai_guan
+    to: 'on'
+  condition: []
+  action:
+  - choose:
+    - conditions:
+      - condition: numeric_state
+        entity_id: counter.zi_dong_hua_qing_ji_ji_shu
+        above: 3
+      sequence:
+      - service: select.select_option
+        data:
+          option: Level2
+        target:
+          entity_id: select.roborock_a64_d5de_water_level
+      - service: vacuum.set_fan_speed
+        data:
+          fan_speed: Strong
+        target:
+          entity_id: vacuum.roborock_a64_d5de_robot_cleaner
+      - service: counter.reset
+        data: {}
+        target:
+          entity_id: counter.zi_dong_hua_qing_ji_ji_shu
+      - service: vacuum.start
+        data: {}
+        target:
+          entity_id: vacuum.roborock_a64_d5de_robot_cleaner
+      - delay:
+          hours: 0
+          minutes: 2
+          seconds: 0
+          milliseconds: 0
+      - service: input_boolean.turn_on
+        data: {}
+        target:
+          entity_id:
+          - input_boolean.ke_wei_sao_di_ji
+          - input_boolean.ke_ting_sao_di_ji
+          - input_boolean.er_tong_fang_sao_di_ji
+          - input_boolean.chu_fang_sao_di_ji
+          - input_boolean.shu_fang_sao_di_ji
+          - input_boolean.xuan_guan_sao_di_ji
+          - input_boolean.zhu_wei_sao_di_ji
+          - input_boolean.zhu_wo_sao_di_ji
+          - input_boolean.can_ting_sao_di_ji
+          - input_boolean.yang_tai_sao_di_ji
+    default:
+    - service: counter.increment
+      data: {}
+      target:
+        entity_id: counter.zi_dong_hua_qing_ji_ji_shu
+    - variables:
+        activity_dict:
+          sensor.yang_tai_huo_dong_shi_jian:
+          - 16
+          - 0
+          - input_boolean.yang_tai_sao_di_ji
+          sensor.shu_fang_huo_dong_shi_jian:
+          - 17
+          - 120
+          - input_boolean.shu_fang_sao_di_ji
+          sensor.ke_ting_huo_dong_shi_jian:
+          - 18
+          - 60
+          - input_boolean.ke_ting_sao_di_ji
+          sensor.er_tong_fang_huo_dong_shi_jian:
+          - 19
+          - 120
+          - input_boolean.er_tong_fang_sao_di_ji
+          sensor.xuan_guan_huo_dong_shi_jian:
+          - 20
+          - 0
+          - input_boolean.xuan_guan_sao_di_ji
+          sensor.chu_fang_huo_dong_shi_jian:
+          - 21
+          - 30
+          - input_boolean.chu_fang_sao_di_ji
+          sensor.can_ting_huo_dong_shi_jian:
+          - 22
+          - 30
+          - input_boolean.can_ting_sao_di_ji
+          sensor.ke_wei_huo_dong_shi_jian:
+          - 23
+          - 0
+          - input_boolean.ke_wei_sao_di_ji
+          sensor.zhu_wo_huo_dong_shi_jian:
+          - 24
+          - 15
+          - input_boolean.zhu_wo_sao_di_ji
+          sensor.zhu_wei_huo_dong_shi_jian:
+          - 25
+          - 0
+          - input_boolean.zhu_wei_sao_di_ji
+    - service: xiaomi_miot.send_command
+      data_template:
+        entity_id: vacuum.roborock_a64_d5de_robot_cleaner
+        method: app_segment_clean
+        params: "{% set ns = namespace(list = []) %} {%- for sensor_id in activity_dict.keys()
+          %}\n  {% set activity_time = (states(sensor_id) | float * 60) %}\n  {% set
+          area_num = activity_dict[sensor_id][0] %}\n  {% set min_time = activity_dict[sensor_id][1]
+          %}\n  {% if activity_time > min_time %}\n    {% set ns.list = ns.list +
+          [area_num] %}\n  {% endif %}\n{% endfor %} {{ ns.list }}\n"
+    - delay:
+        minutes: 2
+    - service: input_boolean.turn_on
+      data_template:
+        entity_id: "{% set ns = namespace(list = []) %} {%- for sensor_id in activity_dict.keys()
+          %}\n  {% set activity_time = (states(sensor_id) | float * 60) %}\n  {% set
+          area_input = activity_dict[sensor_id][2] %}\n  {% set min_time = activity_dict[sensor_id][1]
+          %}\n  {% if activity_time > min_time %}\n    {% set ns.list = ns.list +
+          [area_input] %}\n  {% endif %}\n{% endfor %} {{ ns.list }}\n"
+  mode: single
